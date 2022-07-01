@@ -65,15 +65,5 @@ namespace MSNP.Commands
 			}
 			return command;
 		}
-
-		public static uint? GetCommandTrID(object command)
-		{
-			CommandAttribute attribute = (CommandAttribute)command.GetType().GetCustomAttributes(typeof(CommandAttribute), false).First();
-			if (attribute.TrID)
-			{
-				return (uint?)command.GetType().GetFields().Where((field) => (field.GetCustomAttribute<ArgumentAttribute>() != null) && field.Name == "TrID").First()?.GetValue(command);
-			}
-			return null;
-		}
 	}
 }
