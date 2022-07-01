@@ -12,6 +12,12 @@ namespace MSNP
 		private T value;
 		private Mutex mut;
 
+		public MutexValue(T initial)
+		{
+			value = initial;
+			mut = new();
+		}
+
 		public void Do(Func<T, T> func)
 		{
 			mut.WaitOne();

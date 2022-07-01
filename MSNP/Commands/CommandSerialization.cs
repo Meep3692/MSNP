@@ -4,32 +4,66 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace MSNP.Commands
 {
 	public static class CommandSerialization
 	{
-		public static string Serialize(object command, uint id)
+		public static readonly Dictionary<string, CommandProperties> commandProperties = new()
 		{
-			CommandAttribute attribute = (CommandAttribute)command.GetType().GetCustomAttributes(typeof(CommandAttribute), false).First();
-			string commandString = "";
-			commandString += attribute.Code + " ";
-			if (attribute.TrID)
+			{ "VER", new(true, true, false) },
+			{ "USR", new(true, true, false) },
+			{ "CVR", new(true, true, false) },
+			{ "MSG", new(false, true, true) },
+			{ "ACK", new(true, true, false) },
+		};
+
+		public static string Serialize(Command command)
+		{
+			StringBuilder sb = new();
+			sb.Append(command.Code);
+			sb.Append(' ');
+			if (commandProperties.ContainsKey(command.Code) && commandProperties[command.Code].HasTrIDFromClient)
 			{
-				commandString += id + " ";
+				sb.Append(command.TrID);
+				sb.Append(' ');
 			}
-			string args = command.GetType().GetFields()
-				.Where((field) => (field.GetCustomAttribute<ArgumentAttribute>() != null) && field.Name != "TrID")
-				.Select((field) => field.GetValue(command).ToString())
-				.Aggregate((acc, val) => acc + " " + val);
-			commandString += args;
-			return commandString;
+			for(int i = 0; i < command.Args.Length; i++)
+			{
+				sb.Append(command.Args[i]);
+				sb.Append(' ');
+			}
+			if(commandProperties.ContainsKey(command.Code) && commandProperties[command.Code].HasPayload)
+			{
+				sb.Append(command.Payload.Length);
+			}
+			return sb.ToString();
 		}
 
-		public static object Deserialize(Stream stream)
+		public static Command Deserialize(Stream stream)
 		{
-			throw new NotImplementedException();
+			Command command = new();
+			StreamReader sr = new(stream, Encoding.UTF8);
+			//Read command
+			string line = sr.ReadLine();
+			if (line == null) return null;//I guess readline returns null if the stream closes
+			//Regex to parse
+			string pattern = @"^(?'Code'[A-Z0-9]{3}) +(?:(?'TrID'[0-9]+) +)?(?:(?'Arg'[^\s]+) *)+$";
+			Match match = Regex.Match(line, pattern);
+			command.Code = match.Groups["Code"].Value;
+			command.TrID = uint.Parse("0" + match.Groups["TrID"]?.Value);//Kinda a hack if there is no TrID, the leading zero will zero it
+			command.Args = match.Groups["Arg"].Captures.Select((capture) => capture.Value).ToArray();
+			//Read payload
+			if (commandProperties.ContainsKey(command.Code) && commandProperties[command.Code].HasPayload)
+			{
+				int length = int.Parse(command.Args.Last());
+				command.Payload = new byte[length];
+				stream.Read(command.Payload, 0, length);
+				command.Args = command.Args.SkipLast(1).ToArray();//Remove payload size from args list
+			}
+			return command;
 		}
 
 		public static uint? GetCommandTrID(object command)

@@ -1,4 +1,5 @@
-﻿using MSNP.Commands;
+﻿using MSNP;
+using MSNP.Commands;
 using System;
 
 namespace Test
@@ -7,11 +8,8 @@ namespace Test
 	{
 		static void Main(string[] args)
 		{
-			VER ver = new VER()
-			{
-				Versions = new Arglist("MSNP8 CVR0")
-			};
-			Console.WriteLine(CommandSerialization.Serialize(ver, 7));
+			MSNPConnection connection = new MSNPConnection();
+			connection.Connect(new("m1.escargot.chat:1863"), new("https://m1.escargot.chat/nexus-mock"), "Silverhawk@escargot.chat", "FifteenCars").Wait();
 		}
 	}
 }

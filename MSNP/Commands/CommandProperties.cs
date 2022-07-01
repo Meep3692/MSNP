@@ -8,7 +8,15 @@ namespace MSNP.Commands
 {
 	public struct CommandProperties
 	{
-		bool HasTrID;
-		bool HasPayload;
+		public bool HasTrIDFromServer;
+		public bool HasTrIDFromClient;
+		public bool HasPayload;
+
+		public CommandProperties(bool hasTrIDFromServer, bool hasTrIDFromClient, bool hasPayload)
+		{
+			HasTrIDFromServer = hasTrIDFromServer;
+			HasTrIDFromClient = hasTrIDFromClient;
+			HasPayload = hasPayload;
+		}
 	}
 }

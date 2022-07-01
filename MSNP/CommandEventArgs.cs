@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MSNP.Commands;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,6 @@ namespace MSNP
 {
 	public class CommandEventArgs : EventArgs
 	{
-		public object command;
+		public Command command;
 	}
 }

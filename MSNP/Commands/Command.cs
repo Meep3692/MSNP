@@ -12,5 +12,14 @@ namespace MSNP.Commands
 		public uint TrID;
 		public string[] Args;
 		public byte[] Payload;
+
+		public Command(string code, uint TrID, params string[] args)
+		{
+			this.Code = code;
+			this.TrID = TrID;
+			this.Args = args;
+		}
+
+		public Command() { }
 	}
 }
