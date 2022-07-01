@@ -20,6 +20,8 @@ namespace MSNP
 
 		public delegate void CommandEventHandler(object sender, CommandEventArgs e);
 		public event CommandEventHandler CommandRecieved;
+		public delegate void MessageEventHandler(object sender, MessageEventArgs e);
+		public event MessageEventHandler MessageRecieved;
 
 		//private Dictionary<string, Type> commands;
 		private readonly MutexValue<uint> commandId;
@@ -191,6 +193,19 @@ namespace MSNP
 				string fromDisplay = e.command.Args[1];
 				string message = Encoding.UTF8.GetString(e.command.Payload);
 				Console.WriteLine(message);
+				string regex = @"(?'Header'(?'Key'[\w-]+): ?(?'Value'[^\n\r]*))\r\n";
+				RegexOptions options = RegexOptions.Singleline;
+				Match match = Regex.Match(message, @".*?\r\n\r\n", options);
+				Dictionary<string, string> headers =
+					new(Regex.Matches(match.Value, regex)
+					.Select((match) => new KeyValuePair<string, string>(match.Groups["Key"].Value, match.Groups["Value"].Value)));
+				string body = message.Substring(match.Length);
+				MessageEventArgs me = new MessageEventArgs()
+				{
+					Headers = headers,
+					Body = body
+				};
+				MessageRecieved?.Invoke(this, me);
 			}
 		}
 
