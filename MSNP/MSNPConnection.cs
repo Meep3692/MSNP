@@ -1,6 +1,7 @@
 ﻿using MSNP.Commands;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -201,12 +202,32 @@ namespace MSNP
 			//Pull the client out of the mutex, the mutex is for writing so we can do this weird thing
 			TcpClient socket = null;
 			client.Do((tc) => { socket = tc; return socket; });
+			BufferedStream bs = new(socket.GetStream());
 			while (socket.Connected)
 			{
-				Command command = CommandSerialization.Deserialize(socket.GetStream());
+				string commandLine = "";
+				{//Reading a line of text without StreamReader because StreamReader's buffering fucks everything up for payload commands
+					List<byte> commandBytes = new List<byte>();
+					int next;
+					while ((next = bs.ReadByte()) != 13)
+					{
+						commandBytes.Add((byte)next);
+					}
+					bs.ReadByte();
+					commandLine = Encoding.UTF8.GetString(commandBytes.ToArray());
+				}
+				Command command = CommandSerialization.Deserialize(commandLine);
 				if (command != null)
 				{
-					Console.WriteLine("<<< {0}", CommandSerialization.Serialize(command));
+					//Read payload
+					if (CommandSerialization.commandProperties.ContainsKey(command.Code) && CommandSerialization.commandProperties[command.Code].HasPayload)
+					{
+						int length = int.Parse(command.Args.Last());
+						command.Payload = new byte[length];
+						bs.Read(command.Payload, 0, length);
+						command.Args = command.Args.SkipLast(1).ToArray();//Remove payload size from args list
+					}
+					Console.WriteLine("<<< {0}", commandLine);
 					CommandRecieved?.Invoke(this, new CommandEventArgs() { command = command });
 					uint id = command.TrID;
 					if (id != 0)
@@ -214,6 +235,7 @@ namespace MSNP
 						commandResponses.Add(id, command);
 						commandSemaphores[id].Release();
 					}
+					
 				}
 			}
 			Console.WriteLine("<o> Server Closes Connection");

@@ -42,12 +42,10 @@ namespace MSNP.Commands
 			return sb.ToString();
 		}
 
-		public static Command Deserialize(Stream stream)
+		public static Command Deserialize(String line)
 		{
 			Command command = new();
-			StreamReader sr = new(stream, Encoding.UTF8);
 			//Read command
-			string line = sr.ReadLine();
 			if (line == null) return null;//I guess readline returns null if the stream closes
 			//Regex to parse
 			string pattern = @"^(?'Code'[A-Z0-9]{3}) +(?:(?'TrID'[0-9]+) +)?(?:(?'Arg'[^\s]+) *)+$";
@@ -55,14 +53,6 @@ namespace MSNP.Commands
 			command.Code = match.Groups["Code"].Value;
 			command.TrID = uint.Parse("0" + match.Groups["TrID"]?.Value);//Kinda a hack if there is no TrID, the leading zero will zero it
 			command.Args = match.Groups["Arg"].Captures.Select((capture) => capture.Value).ToArray();
-			//Read payload
-			if (commandProperties.ContainsKey(command.Code) && commandProperties[command.Code].HasPayload)
-			{
-				int length = int.Parse(command.Args.Last());
-				command.Payload = new byte[length];
-				stream.Read(command.Payload, 0, length);
-				command.Args = command.Args.SkipLast(1).ToArray();//Remove payload size from args list
-			}
 			return command;
 		}
 	}
